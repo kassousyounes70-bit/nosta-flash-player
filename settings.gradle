@@ -1,0 +1,2 @@
+rootProject.name = "NostaFlashPlayer"
+include ':app'
