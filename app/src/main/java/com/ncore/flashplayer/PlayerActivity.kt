@@ -4,11 +4,15 @@ import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.WindowManager
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
+import androidx.webkit.WebViewAssetLoader
 import com.ncore.flashplayer.databinding.ActivityPlayerBinding
+import java.io.File
 
 class PlayerActivity : AppCompatActivity() {
 
@@ -39,27 +43,46 @@ class PlayerActivity : AppCompatActivity() {
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView(gamePath: String, isUrl: Boolean, gameName: String) {
+        val assetLoader = WebViewAssetLoader.Builder()
+            .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
+            .build()
+
         binding.webView.apply {
             settings.apply {
-                javaScriptEnabled          = true
-                domStorageEnabled          = true
-                allowFileAccess            = true
-                allowContentAccess         = true
-                allowFileAccessFromFileURLs = true
-                allowUniversalAccessFromFileURLs = true
+                javaScriptEnabled = true
+                domStorageEnabled = true
                 mediaPlaybackRequiresUserGesture = false
-                mixedContentMode           = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                cacheMode                  = WebSettings.LOAD_NO_CACHE
-                useWideViewPort            = true
-                loadWithOverviewMode       = true
+                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                cacheMode = WebSettings.LOAD_NO_CACHE
+                useWideViewPort = true
+                loadWithOverviewMode = true
             }
 
             webChromeClient = WebChromeClient()
-            webViewClient   = WebViewClient()
+            webViewClient = object : WebViewClient() {
+                override fun shouldInterceptRequest(
+                    view: WebView,
+                    request: WebResourceRequest
+                ): WebResourceResponse? {
+                    val requestUrl = request.url.toString()
+                    if (!isUrl && requestUrl == "https://appassets.androidplatform.net/game_file.swf") {
+                        return try {
+                            WebResourceResponse(
+                                "application/x-shockwave-flash",
+                                null,
+                                File(gamePath).inputStream()
+                            )
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                    return assetLoader.shouldInterceptRequest(request.url)
+                }
+            }
 
-            val gameUrl = if (isUrl) gamePath else "file://${gamePath}"
+            val gameUrl = if (isUrl) gamePath else "https://appassets.androidplatform.net/game_file.swf"
             val html = buildRuffleHTML(gameUrl, gameName)
-            loadDataWithBaseURL("file:///android_asset/", html, "text/html", "UTF-8", null)
+            loadDataWithBaseURL("https://appassets.androidplatform.net/assets/", html, "text/html", "UTF-8", null)
         }
     }
 
