@@ -1,1 +1,58 @@
+name: Build APK
 
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # تشغيل يدوي من GitHub
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Download Ruffle
+        run: |
+          mkdir -p app/src/main/assets/ruffle
+          # تحميل آخر إصدار من Ruffle للمتصفح
+          curl -L "https://github.com/ruffle-rs/ruffle/releases/latest/download/ruffle-nightly-web.zip" -o ruffle.zip || \
+          curl -L "https://github.com/ruffle-rs/ruffle/releases/download/nightly-2024-09-01/ruffle-nightly-2024-09-01-web.zip" -o ruffle.zip
+          unzip -j ruffle.zip "*.js" -d app/src/main/assets/ruffle/ || true
+          unzip -j ruffle.zip "*.wasm" -d app/src/main/assets/ruffle/ || true
+          ls -la app/src/main/assets/ruffle/
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: nosta-flash-player-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      - name: Build Release APK (unsigned)
+        run: ./gradlew assembleRelease
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: nosta-flash-player-release
+          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          retention-days: 30
