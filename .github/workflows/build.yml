@@ -3,9 +3,10 @@ name: Build APK
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch:  # تشغيل يدوي من GitHub
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
@@ -24,35 +25,40 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.4'
+
       - name: Download Ruffle
         run: |
           mkdir -p app/src/main/assets/ruffle
-          # تحميل آخر إصدار من Ruffle للمتصفح
-          curl -L "https://github.com/ruffle-rs/ruffle/releases/latest/download/ruffle-nightly-web.zip" -o ruffle.zip || \
-          curl -L "https://github.com/ruffle-rs/ruffle/releases/download/nightly-2024-09-01/ruffle-nightly-2024-09-01-web.zip" -o ruffle.zip
-          unzip -j ruffle.zip "*.js" -d app/src/main/assets/ruffle/ || true
-          unzip -j ruffle.zip "*.wasm" -d app/src/main/assets/ruffle/ || true
-          ls -la app/src/main/assets/ruffle/
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+          # تحميل Ruffle من أحدث إصدار مستقر
+          RUFFLE_URL="https://github.com/ruffle-rs/ruffle/releases/download/nightly-2024-11-22/ruffle-nightly-2024-11-22-web.zip"
+          echo "Downloading Ruffle..."
+          curl -L --retry 3 --retry-delay 5 "$RUFFLE_URL" -o ruffle.zip
+          # التحقق من الملف
+          file ruffle.zip
+          ls -lh ruffle.zip
+          # فك الضغط
+          unzip -j ruffle.zip "*.js"   -d app/src/main/assets/ruffle/ 2>/dev/null || true
+          unzip -j ruffle.zip "*.wasm" -d app/src/main/assets/ruffle/ 2>/dev/null || true
+          echo "=== Ruffle files ==="
+          ls -la app/src/main/assets/ruffle/ || echo "No ruffle files"
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
 
-      - name: Upload APK
+      - name: Show APK info
+        run: |
+          find . -name "*.apk" 2>/dev/null
+          ls -lh app/build/outputs/apk/debug/ 2>/dev/null || true
+
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: nosta-flash-player-debug
           path: app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 30
-
-      - name: Build Release APK (unsigned)
-        run: ./gradlew assembleRelease
-
-      - name: Upload Release APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: nosta-flash-player-release
-          path: app/build/outputs/apk/release/app-release-unsigned.apk
           retention-days: 30
