@@ -26,20 +26,22 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.2'
+
       - name: Download Ruffle
         run: |
           mkdir -p app/src/main/assets/ruffle
           curl -L "https://github.com/ruffle-rs/ruffle/releases/download/nightly-2024-09-01/ruffle-nightly-2024-09-01-web.zip" -o ruffle.zip
           unzip -j ruffle.zip "*.js"   -d app/src/main/assets/ruffle/ || true
           unzip -j ruffle.zip "*.wasm" -d app/src/main/assets/ruffle/ || true
-          echo "Ruffle files:"
+          echo "=== Ruffle files ==="
           ls -la app/src/main/assets/ruffle/
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: gradle assembleDebug --stacktrace --no-daemon
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
@@ -47,4 +49,5 @@ jobs:
           name: nosta-flash-player-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
+
 
