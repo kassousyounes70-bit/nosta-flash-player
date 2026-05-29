@@ -26,35 +26,23 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.4'
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Download Ruffle
         run: |
           mkdir -p app/src/main/assets/ruffle
-          # تحميل Ruffle من أحدث إصدار مستقر
           RUFFLE_URL="https://github.com/ruffle-rs/ruffle/releases/download/nightly-2024-11-22/ruffle-nightly-2024-11-22-web.zip"
-          echo "Downloading Ruffle..."
           curl -L --retry 3 --retry-delay 5 "$RUFFLE_URL" -o ruffle.zip
-          # التحقق من الملف
-          file ruffle.zip
-          ls -lh ruffle.zip
-          # فك الضغط
-          unzip -j ruffle.zip "*.js"   -d app/src/main/assets/ruffle/ 2>/dev/null || true
-          unzip -j ruffle.zip "*.wasm" -d app/src/main/assets/ruffle/ 2>/dev/null || true
-          echo "=== Ruffle files ==="
-          ls -la app/src/main/assets/ruffle/ || echo "No ruffle files"
+          unzip -j ruffle.zip "*.js"   -d app/src/main/assets/ruffle/ > /dev/null 2>&1 || true
+          unzip -j ruffle.zip "*.wasm" -d app/src/main/assets/ruffle/ > /dev/null 2>&1 || true
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
 
       - name: Build Debug APK
-        run: gradle :app:assembleDebug --no-daemon --stacktrace
+        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
         env:
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
-
-      - name: Show APK info
-        run: |
-          find . -name "*.apk" 2>/dev/null
-          ls -lh app/build/outputs/apk/debug/ 2>/dev/null || true
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
