@@ -9,7 +9,6 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
 import com.ncore.flashplayer.databinding.ActivityPlayerBinding
-import java.io.File
 
 class PlayerActivity : AppCompatActivity() {
 
@@ -19,7 +18,6 @@ class PlayerActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // ملء الشاشة كاملاً
         window.setFlags(
             WindowManager.LayoutParams.FLAG_FULLSCREEN,
             WindowManager.LayoutParams.FLAG_FULLSCREEN
@@ -34,13 +32,13 @@ class PlayerActivity : AppCompatActivity() {
 
         binding.tvGameName.text = gameName
 
-        setupWebView(gamePath, isUrl)
+        setupWebView(gamePath, isUrl, gameName)
 
         binding.btnClose.setOnClickListener { finish() }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    private fun setupWebView(gamePath: String, isUrl: Boolean) {
+    private fun setupWebView(gamePath: String, isUrl: Boolean, gameName: String) {
         binding.webView.apply {
             settings.apply {
                 javaScriptEnabled          = true
@@ -59,10 +57,7 @@ class PlayerActivity : AppCompatActivity() {
             webChromeClient = WebChromeClient()
             webViewClient   = WebViewClient()
 
-            // بناء صفحة HTML مع Ruffle
-            val gameUrl = if (isUrl) gamePath
-                         else "file://${gamePath}"
-
+            val gameUrl = if (isUrl) gamePath else "file://${gamePath}"
             val html = buildRuffleHTML(gameUrl, gameName)
             loadDataWithBaseURL("file:///android_asset/", html, "text/html", "UTF-8", null)
         }
