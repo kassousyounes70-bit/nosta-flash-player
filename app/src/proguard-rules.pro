@@ -1,3 +1,0 @@
--keep class com.ncore.flashplayer.** { *; }
--keepattributes *Annotation*
--dontwarn okhttp3.**
